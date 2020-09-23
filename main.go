@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/yezarela/go-soccer/module/player"
 	"github.com/yezarela/go-soccer/module/team"
 	"github.com/yezarela/go-soccer/pkg/conn"
 )
@@ -42,9 +43,11 @@ func main() {
 
 	// Repositories
 	teamRepo := team.NewRepository(db)
+	playerRepo := player.NewRepository(db)
 
 	// Route & handlers
 	team.NewHandler(e, teamRepo)
+	player.NewHandler(e, playerRepo)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":1323"))
