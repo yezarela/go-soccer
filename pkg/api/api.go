@@ -32,6 +32,20 @@ func ResponseOK(c echo.Context, data interface{}) error {
 	return c.JSON(http.StatusOK, body)
 }
 
+
+// ResponseCreated returns 201
+func ResponseCreated(c echo.Context, data interface{}) error {
+
+	body := &Response{
+		Meta: ResponseMeta{
+			Code: http.StatusCreated,
+		},
+		Data: data,
+	}
+
+	return c.JSON(http.StatusCreated, body)
+}
+
 func responseError(c echo.Context, statusCode int, errType, msg string) error {
 
 	body := &Response{

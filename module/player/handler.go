@@ -75,5 +75,5 @@ func (h *Handler) Post(c echo.Context) error {
 		return api.ResponseError(c, err)
 	}
 
-	return api.ResponseOK(c, res)
+	return api.ResponseCreated(c, res)
 }

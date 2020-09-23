@@ -1,6 +1,6 @@
 # go-soccer
 
-Simple soccer REST API
+Simple soccer REST API with Echo & MongoDB
 
 ## How to run this project
 
