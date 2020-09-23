@@ -39,18 +39,7 @@ func (repo *repository) ListPlayer(ctx context.Context) ([]model.Player, error) 
 
 	var items []model.Player
 
-	for cur.Next(ctx) {
-		var data model.Player
-
-		err := cur.Decode(&data)
-		if err != nil {
-			return nil, errors.Wrap(err, op)
-		}
-
-		items = append(items, data)
-	}
-
-	if err := cur.Err(); err != nil {
+	if err = cur.All(ctx, &items); err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
@@ -80,10 +69,14 @@ func (repo *repository) GetPlayer(ctx context.Context, id string) (*model.Player
 func (repo *repository) CreatePlayer(ctx context.Context, data model.Player) (*model.Player, error) {
 	op := "player.Repository.CreatePlayer"
 
-	data.CreatedAt = time.Now()
-	data.ID = primitive.NilObjectID
+	body := bson.M{
+		"name":       data.Name,
+		"nickname":   data.Nickname,
+		"position":   data.Position,
+		"created_at": time.Now(),
+	}
 
-	res, err := repo.db.Collection("players").InsertOne(ctx, data)
+	res, err := repo.db.Collection("players").InsertOne(ctx, body)
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}

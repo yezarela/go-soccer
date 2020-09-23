@@ -66,9 +66,6 @@ func (h *Handler) Post(c echo.Context) error {
 	if len(body.Name) <= 0 {
 		return api.ResponseBadRequest(c, "name cannot be empty")
 	}
-	if len(body.Nickname) <= 0 {
-		return api.ResponseBadRequest(c, "nickname cannot be empty")
-	}
 	if len(body.Position) <= 0 {
 		return api.ResponseBadRequest(c, "position cannot be empty")
 	}
