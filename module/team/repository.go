@@ -31,26 +31,16 @@ func NewRepository(db *mongo.Database) Repository {
 func (repo *repository) ListTeam(ctx context.Context) ([]model.Team, error) {
 	op := "team.Repository.ListTeam"
 
-	var items []model.Team
+	lookup := bson.D{{"$lookup", bson.D{{"from", "players"}, {"localField", "players"}, {"foreignField", "_id"}, {"as", "players"}}}}
 
-	cur, err := repo.db.Collection("teams").Find(ctx, bson.D{})
+	cur, err := repo.db.Collection("teams").Aggregate(ctx, mongo.Pipeline{lookup})
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
-	defer cur.Close(ctx)
 
-	for cur.Next(ctx) {
-		var data model.Team
+	var items []model.Team
 
-		err := cur.Decode(&data)
-		if err != nil {
-			return nil, errors.Wrap(err, op)
-		}
-
-		items = append(items, data)
-	}
-
-	if err := cur.Err(); err != nil {
+	if err = cur.All(ctx, &items); err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
@@ -63,17 +53,25 @@ func (repo *repository) GetTeam(ctx context.Context, id string) (*model.Team, er
 
 	oid, _ := primitive.ObjectIDFromHex(id)
 
-	var data *model.Team
+	lookup1 := bson.D{{"$lookup", bson.D{{"from", "players"}, {"localField", "players"}, {"foreignField", "_id"}, {"as", "players"}}}}
+	lookup2 := bson.D{{"$match", bson.D{{"_id", oid}}}}
 
-	err := repo.db.Collection("teams").FindOne(ctx, bson.M{"_id": oid}).Decode(&data)
+	cur, err := repo.db.Collection("teams").Aggregate(ctx, mongo.Pipeline{lookup1, lookup2})
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, nil
-		}
 		return nil, errors.Wrap(err, op)
 	}
 
-	return data, nil
+	var items []model.Team
+
+	if err = cur.All(ctx, &items); err != nil {
+		return nil, errors.Wrap(err, op)
+	}
+
+	if len(items) > 0 {
+		return &items[0], nil
+	}
+
+	return nil, nil
 }
 
 // CreateTeam creates a new team
@@ -84,8 +82,27 @@ func (repo *repository) CreateTeam(ctx context.Context, data model.Team) (*model
 		"name":        data.Name,
 		"description": data.Description,
 		"location":    data.Location,
-		"players":     data.Players,
 		"created_at":  time.Now(),
+	}
+
+	if len(data.Players) > 0 {
+		players := []interface{}{}
+
+		for _, p := range data.Players {
+			players = append(players, bson.M{
+				"name":       p.Name,
+				"nickname":   p.Nickname,
+				"position":   p.Position,
+				"created_at": time.Now(),
+			})
+		}
+
+		res, err := repo.db.Collection("players").InsertMany(ctx, players)
+		if err != nil {
+			return nil, errors.Wrap(err, op)
+		}
+
+		body["players"] = res.InsertedIDs
 	}
 
 	res, err := repo.db.Collection("teams").InsertOne(ctx, body)
